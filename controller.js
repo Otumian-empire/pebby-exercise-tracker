@@ -106,9 +106,31 @@ const readLogByUserId = async (req, res) => {
       return res.json({ error: "User not found" });
     }
 
-    const exercises = await Promise.resolve(
-      Exercise.find({ user: user }).select("description duration date").exec()
+    // query to search for the exercise
+    // from, to, limit
+    const { from, to, limit } = req.query;
+
+    const query = { user };
+
+    // check if the from, to and limit are set to filter the result to return
+    if (from && to) {
+      query.date = { $gte: new Date(from), $lte: new Date(to) };
+    } else if (from) {
+      query.date = { $gte: new Date(from) };
+    } else if (to) {
+      query.date = { $lte: new Date(to) };
+    }
+
+    let exercisesQuery = Exercise.find(query).select(
+      "description duration date"
     );
+
+    // Apply limit to the query if limit is provided
+    if (limit) {
+      exercisesQuery = exercisesQuery.limit(parseInt(limit));
+    }
+
+    const exercises = await Promise.resolve(exercisesQuery.exec());
 
     return res.json({
       _id: user._id,
